@@ -3,6 +3,8 @@ import cors from "cors";
 import helmet from "helmet";
 import rateLimit from "express-rate-limit";
 import authRoutes from "./routes/auth.routes.js";
+
+
 const app = express();
 
 const limiter = rateLimit({
@@ -25,6 +27,7 @@ app.use(
 app.use(limiter);
 
 app.use("/api/auth", authRoutes);  ///route prefix
+
 
 app.get("/", (req, res) => {
   res.send("API is running...");

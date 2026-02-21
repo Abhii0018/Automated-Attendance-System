@@ -47,7 +47,7 @@ export const loginValidator = [
   Middleware to Handle Validation Errors  // this is custom middleware
 */
 export const validate = (req, res, next) => {
-  const errors = validationResult(req);
+  const errors = validationResult(req);    // all the error will be stored in validate
 
   if (!errors.isEmpty()) {
     return res.status(400).json({
@@ -56,5 +56,5 @@ export const validate = (req, res, next) => {
     });
   }
 
-  next();
+  next();    //if there will be no error then it will go ahead for another moddleware
 };
