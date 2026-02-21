@@ -7,12 +7,12 @@ const academicRecordSchema = new mongoose.Schema(
       ref: "Student",    //can populate later
       required: true,
     },
-    year: {
-      type: Number,
+    teacherId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
       required: true,
-      min: 1,
-      max: 4,
     },
+    
     semester: {
       type: Number,
       required: true,
@@ -22,33 +22,36 @@ const academicRecordSchema = new mongoose.Schema(
     section: {
       type: String,
       required: true,
+      uppercase: true,
+      match: [/^[A-Z]{2}$/, "Section must be two uppercase letters"],
     },
     rollNumber: {
       type: Number,
       required: true,
+      min: 1,
+      max: 50,
     },
-    assignedTeacher: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
+    updatedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User"
+},
+   
+   
   },
   { timestamps: true }
 );
 /*
-  Unique roll number per teacher per section per semester
+    Student cannot have two records in same semester
 */
-academicRecordSchema.index(     //database concepts: compound unique indexes.
-  { year: 1, semester: 1, section: 1, assignedTeacher: 1, rollNumber: 1 },
+academicRecordSchema.index(
+  { studentId: 1, semester: 1 },
   { unique: true }
 );
 
-/*
-  Prevent duplicate academic record for same student in same semester Within a class (same teacher + section + semester),
-two students cannot have the same roll number.
-*/
+//Roll must be unique inside teacher + semester + section
+
 academicRecordSchema.index(
-  { studentId: 1, year: 1, semester: 1 },
+  { teacherId: 1, semester: 1, section: 1, rollNumber: 1 },
   { unique: true }
 );
 

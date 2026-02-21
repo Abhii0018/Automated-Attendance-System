@@ -23,6 +23,11 @@ const userSchema = new mongoose.Schema(
       enum: ["Admin", "User"],
       default: "User",
     },
+    teacherId: {
+    type: String,
+    unique: true,
+    sparse: true
+    },
   },
   { timestamps: true }
 );

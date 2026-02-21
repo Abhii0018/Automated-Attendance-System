@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/user.model.js";
-
+import Counter from "../models/counter.model.js";
 /*
   Generate JWT Token
 */
@@ -43,6 +43,49 @@ export const registerUser = async (data) => {
     name: user.name,
     email: user.email,
     role: user.role,
+  };
+};
+
+// Add createTeacher Service
+
+export const createTeacher = async (data, currentUser) => {
+  if (currentUser.role !== "Admin") {
+    throw new Error("Only Admin can create teachers");
+  }
+
+  const { name, email, password } = data;
+
+  // Check existing email
+  const existingUser = await User.findOne({ email });
+  if (existingUser) {
+    throw new Error("User already exists");
+  }
+
+  // Generate teacher counter
+  const counter = await Counter.findOneAndUpdate(
+    { name: "teacher" },
+    { $inc: { sequence: 1 } },
+    { new: true, upsert: true }
+  );
+
+  const teacherId = String(counter.sequence + 10000);
+
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  const teacher = await User.create({
+    name,
+    email,
+    password: hashedPassword,
+    role: "Teacher",
+    teacherId,
+  });
+
+  return {
+    id: teacher._id,
+    name: teacher.name,
+    email: teacher.email,
+    role: teacher.role,
+    teacherId: teacher.teacherId,
   };
 };
 
