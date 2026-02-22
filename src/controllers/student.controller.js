@@ -1,12 +1,12 @@
 import {
   createStudent,
   getAllStudents,
-  getStudentById,
   deleteStudent,
+  getStudentByRegistration,
 } from "../services/student.service.js";
 
 /*
-  Create Student (Admin Only)
+  Create Student
 */
 export const createStudentController = async (req, res) => {
   try {
@@ -44,27 +44,28 @@ export const getAllStudentsController = async (req, res) => {
   }
 };
 
-/*
-  Get Single Student
-*/
-export const getStudentByIdController = async (req, res) => {
+//controoler for fetch student uisng registration number
+
+export const getStudentByRegistrationController = async (req, res) => {
   try {
-    const student = await getStudentById(req.params.id, req.user);
+    const student = await getStudentByRegistration(
+      req.query.registrationNumber,
+      req.user
+    );
 
     res.status(200).json({
       success: true,
       data: student,
     });
   } catch (error) {
-    res.status(404).json({
+    res.status(400).json({
       success: false,
       message: error.message,
     });
   }
 };
-
 /*
-  Delete Student (Admin Only)
+  Delete Student
 */
 export const deleteStudentController = async (req, res) => {
   try {

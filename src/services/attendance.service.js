@@ -1,6 +1,7 @@
 import Attendance from "../models/attendance.model.js";
 import AcademicRecord from "../models/academicRecord.model.js";
 import Student from "../models/student.model.js";
+import { sendAbsenceSMS } from "./notification.service.js";
 
 /*
   Submit Section Attendance
@@ -11,28 +12,40 @@ export const submitAttendance = async (data, currentUser) => {
   }
 
   const { semester, section, attendanceList } = data;
+  const semesterNumber = Number(semester);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // 1️⃣ Get all students of this section
   const records = await AcademicRecord.find({
-    semester,
+    semester: semesterNumber,
     section,
-  }).populate("studentId");
+  });
 
   if (!records.length) {
     throw new Error("No students found for this section");
   }
 
-  // 2️⃣ Validate full submission
-  if (attendanceList.length !== records.length) {
-    throw new Error("Attendance must be submitted for all students");
+  const sectionStudentIds = records.map(r =>
+    r.studentId.toString()
+  );
+
+  const submittedStudentIds = attendanceList.map(s =>
+    s.studentId.toString()
+  );
+
+  const isValidSubmission =
+    sectionStudentIds.length === submittedStudentIds.length &&
+    sectionStudentIds.every(id =>
+      submittedStudentIds.includes(id)
+    );
+
+  if (!isValidSubmission) {
+    throw new Error("Invalid attendance list submitted");
   }
 
-  // 3️⃣ Prevent duplicate submission
   const existing = await Attendance.findOne({
-    semester,
+    semester: semesterNumber,
     section,
     date: today,
   });
@@ -41,31 +54,36 @@ export const submitAttendance = async (data, currentUser) => {
     throw new Error("Attendance already submitted for today");
   }
 
-  // 4️⃣ Save attendance
-  const attendance = await Attendance.create({
-    semester,
+  await Attendance.create({
+    semester: semesterNumber,
     section,
     date: today,
     attendanceList,
     submittedBy: currentUser.id,
   });
 
-  // 5️⃣ Identify absent students
   const absentStudents = attendanceList.filter(
-    (s) => s.status === "Absent"
+    s => s.status === "Absent"
   );
 
-  // 6️⃣ Fetch parent details for SMS
   const absentStudentDetails = await Student.find({
-    _id: { $in: absentStudents.map((s) => s.studentId) },
+    _id: { $in: absentStudents.map(s => s.studentId) },
   });
 
-  // Simulated SMS sending
-  absentStudentDetails.forEach((student) => {
-    console.log(
-      `SMS to ${student.parentPhone}: Your child ${student.name} is absent today`
+  try {
+    await Promise.all(
+      absentStudentDetails.map(student => {
+        if (student.parentPhone) {
+          return sendAbsenceSMS(
+            student.parentPhone,
+            student.name
+          );
+        }
+      })
     );
-  });
+  } catch (error) {
+    console.error("SMS sending failed:", error.message);
+  }
 
   return {
     totalStudents: records.length,
@@ -74,18 +92,118 @@ export const submitAttendance = async (data, currentUser) => {
   };
 };
 
+/*
+  Internal Helper — Calculate Attendance Stats
+*/
+const calculateAttendanceStats = async (studentId) => {
+  const attendanceDocs = await Attendance.find({
+    "attendanceList.studentId": studentId,
+  });
+
+  if (!attendanceDocs.length) {
+    return {
+      totalClasses: 0,
+      totalPresent: 0,
+      totalAbsent: 0,
+      attendancePercentage: 0,
+    };
+  }
+
+  let totalClasses = 0;
+  let totalPresent = 0;
+  let totalAbsent = 0;
+
+  attendanceDocs.forEach(doc => {
+    const entry = doc.attendanceList.find(
+      item => item.studentId.toString() === studentId.toString()
+    );
+
+    if (entry) {
+      totalClasses++;
+      if (entry.status === "Present") totalPresent++;
+      else totalAbsent++;
+    }
+  });
+
+  const percentage =
+    totalClasses === 0
+      ? 0
+      : Number(((totalPresent / totalClasses) * 100).toFixed(2));
+
+  return {
+    totalClasses,
+    totalPresent,
+    totalAbsent,
+    attendancePercentage: percentage,
+  };
+};
+
+/*
+  Get Student Attendance By Registration (Admin Only)
+*/
+export const getStudentAttendanceByRegistration = async (
+  registrationNumber,
+  currentUser
+) => {
+  if (currentUser.role !== "Admin") {
+    throw new Error("Only Admin can view student attendance");
+  }
+
+  const student = await Student.findOne({ registrationNumber });
+
+  if (!student) {
+    throw new Error("Student not found");
+  }
+
+  const stats = await calculateAttendanceStats(student._id);
+
+  return {
+    studentName: student.name,
+    registrationNumber: student.registrationNumber,
+    ...stats,
+  };
+};
+
+//student can check there own attendance
+export const getMyAttendance = async (currentUser) => {
+  if (currentUser.role !== "Student") {
+    throw new Error("Only Students can view their attendance");
+  }
+
+  const student = await Student.findOne({
+    userId: currentUser.id,
+  });
+
+  if (!student) {
+    throw new Error("Student record not found");
+  }
+
+  const stats = await calculateAttendanceStats(student._id);
+
+  return {
+    studentName: student.name,
+    registrationNumber: student.registrationNumber,
+    ...stats,
+    isLowAttendance: stats.attendancePercentage < 75,
+  };
+};
+
+/*
+  Get Section Attendance (Admin Only)
+*/
 export const getSectionAttendance = async (query, currentUser) => {
   if (currentUser.role !== "Admin") {
     throw new Error("Only Admin can view attendance");
   }
 
   const { semester, section, date } = query;
+  const semesterNumber = Number(semester);
 
   const selectedDate = new Date(date);
   selectedDate.setHours(0, 0, 0, 0);
 
   const attendance = await Attendance.findOne({
-    semester,
+    semester: semesterNumber,
     section,
     date: selectedDate,
   }).populate("attendanceList.studentId");
@@ -99,7 +217,7 @@ export const getSectionAttendance = async (query, currentUser) => {
   const presentStudents = [];
   const absentStudents = [];
 
-  attendance.attendanceList.forEach((entry) => {
+  attendance.attendanceList.forEach(entry => {
     if (entry.status === "Present") {
       presentStudents.push(entry.studentId);
     } else {
@@ -108,7 +226,7 @@ export const getSectionAttendance = async (query, currentUser) => {
   });
 
   return {
-    semester,
+    semester: semesterNumber,
     section,
     date: selectedDate,
     totalStudents: attendance.attendanceList.length,

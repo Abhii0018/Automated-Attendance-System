@@ -2,7 +2,8 @@ import express from "express";
 import {
   createStudentController,
   getAllStudentsController,
-  getStudentByIdController,
+  // getStudentByIdController,
+  getStudentByRegistrationController,
   deleteStudentController,
 } from "../controllers/student.controller.js";
 
@@ -17,9 +18,6 @@ import { authorize } from "../middlewares/role.middleware.js";
 
 const router = express.Router();
 
-/*
-  Create Student (Admin Only)
-*/
 router.post(
   "/",
   protect,
@@ -29,31 +27,17 @@ router.post(
   createStudentController
 );
 
-/*
-  Get All Students
-  Admin → all students
-  Teacher → only assigned students
-*/
-router.get(
-  "/",
-  protect,
-  getAllStudentsController
-);
+router.get("/", protect, getAllStudentsController);
 
-/*
-  Get Single Student
-*/
 router.get(
   "/:id",
   protect,
   idValidator,
   validate,
-  getStudentByIdController
+  getStudentByRegistrationController
+  // getStudentByIdController
 );
 
-/*
-  Delete Student (Admin Only)
-*/
 router.delete(
   "/:id",
   protect,

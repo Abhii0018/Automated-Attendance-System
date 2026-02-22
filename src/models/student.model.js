@@ -42,6 +42,17 @@ const studentSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+    default: null,
+    unique: true
+},
+isRegistered: {
+  type: Boolean,
+  default: false,
+},
   },
   { timestamps: true }
 );

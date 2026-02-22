@@ -16,7 +16,8 @@
     "express-validator": "^7.3.1",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
-    "mongoose": "^9.2.1"
+    "mongoose": "^9.2.1",
+    "twilio": "^5.12.2"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"
