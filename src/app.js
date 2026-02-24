@@ -16,7 +16,13 @@ const limiter = rateLimit({
 });
 
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+  origin: [
+    "http://localhost:5173",
+    "https://automated-attendance-system-fronten-beta.vercel.app"
+  ],
+  credentials: true
+}));
 
 // Disable CSP in development
 app.use(
