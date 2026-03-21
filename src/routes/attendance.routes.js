@@ -1,9 +1,13 @@
 import express from "express";
-import { submitAttendanceController} from "../controllers/attendance.controller.js";
+import {
+  submitAttendanceController,
+  getSectionAttendanceController,
+  getSectionStudentsController,
+  getTeacherOverviewController,
+  getAdminOverviewController,
+} from "../controllers/attendance.controller.js";
 import { protect } from "../middlewares/auth.middleware.js";
 import { authorize } from "../middlewares/role.middleware.js";
-
-import {getSectionAttendanceController} from "../controllers/attendance.controller.js";
 
 const router = express.Router();
 
@@ -14,15 +18,39 @@ const router = express.Router();
 router.post(
   "/",
   protect,
-  authorize("Teacher", "Admin"),
+  authorize("teacher", "admin"),
   submitAttendanceController
 );
 
 router.get(
   "/section",
   protect,
-  authorize("Admin"),
+  authorize("admin"),
   getSectionAttendanceController
+);
+
+// Get students for a section (Teacher/Admin)
+router.get(
+  "/section/students",
+  protect,
+  authorize("teacher", "admin"),
+  getSectionStudentsController
+);
+
+// Teacher dashboard overview
+router.get(
+  "/teacher/overview",
+  protect,
+  authorize("teacher"),
+  getTeacherOverviewController
+);
+
+// Admin dashboard overview
+router.get(
+  "/admin/overview",
+  protect,
+  authorize("admin"),
+  getAdminOverviewController
 );
 
 export default router;

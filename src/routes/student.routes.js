@@ -2,10 +2,11 @@ import express from "express";
 import {
   createStudentController,
   getAllStudentsController,
-  // getStudentByIdController,
   getStudentByRegistrationController,
   deleteStudentController,
+  assignSectionController,
 } from "../controllers/student.controller.js";
+
 
 import {
   createStudentValidator,
@@ -21,7 +22,7 @@ const router = express.Router();
 router.post(
   "/",
   protect,
-  authorize("Admin"),
+  authorize("admin"),
   createStudentValidator,
   validate,
   createStudentController
@@ -41,10 +42,19 @@ router.get(
 router.delete(
   "/:id",
   protect,
-  authorize("Admin"),
+  authorize("admin"),
   idValidator,
   validate,
   deleteStudentController
+);
+
+router.post(
+  "/:id/assign-section",
+  protect,
+  authorize("admin"),
+  idValidator,
+  validate,
+  assignSectionController
 );
 
 export default router;

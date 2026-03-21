@@ -2,6 +2,9 @@ import {
   submitAttendance,
   getSectionAttendance,
   getStudentAttendanceByRegistration,
+  getSectionStudents,
+  getTeacherOverview,
+  getAdminOverview,
 } from "../services/attendance.service.js";
 
 /*
@@ -65,6 +68,63 @@ export const getStudentAttendanceController = async (
         req.query.registrationNumber,
         req.user
       );
+
+    res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+/*
+  Get students for a section (Teacher/Admin)
+*/
+export const getSectionStudentsController = async (req, res) => {
+  try {
+    const result = await getSectionStudents(req.query, req.user);
+
+    res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+/*
+  Teacher dashboard overview
+*/
+export const getTeacherOverviewController = async (req, res) => {
+  try {
+    const result = await getTeacherOverview(req.user);
+
+    res.status(200).json({
+      success: true,
+      data: result,
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+/*
+  Admin dashboard overview
+*/
+export const getAdminOverviewController = async (req, res) => {
+  try {
+    const result = await getAdminOverview(req.user);
 
     res.status(200).json({
       success: true,

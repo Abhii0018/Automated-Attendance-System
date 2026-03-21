@@ -1,13 +1,15 @@
 import Attendance from "../models/attendance.model.js";
 import AcademicRecord from "../models/academicRecord.model.js";
 import Student from "../models/student.model.js";
-import { sendAbsenceSMS } from "./notification.service.js";
+import User from "../models/user.model.js";
+import { sendAbsenceSMS, sendAbsenceEmail } from "./notification.service.js";
 
 /*
   Submit Section Attendance
 */
 export const submitAttendance = async (data, currentUser) => {
-  if (currentUser.role !== "Teacher" && currentUser.role !== "Admin") {
+  const role = currentUser.role?.toLowerCase();
+  if (role !== "teacher" && role !== "admin") {
     throw new Error("Not authorized to submit attendance");
   }
 
@@ -24,6 +26,13 @@ export const submitAttendance = async (data, currentUser) => {
 
   if (!records.length) {
     throw new Error("No students found for this section");
+  }
+
+  if (role === "teacher") {
+    const isAssigned = records.some(r => r.teacherId?.toString() === currentUser.id.toString());
+    if (!isAssigned) {
+      throw new Error("You are not assigned to this section.");
+    }
   }
 
   const sectionStudentIds = records.map(r =>
@@ -70,20 +79,31 @@ export const submitAttendance = async (data, currentUser) => {
     _id: { $in: absentStudents.map(s => s.studentId) },
   });
 
-  try {
-    await Promise.all(
-      absentStudentDetails.map(student => {
-        if (student.parentPhone) {
-          return sendAbsenceSMS(
-            student.parentPhone,
-            student.name
-          );
-        }
-      })
-    );
-  } catch (error) {
-    console.error("SMS sending failed:", error.message);
-  }
+  // ── Dispatch Notifications in Background (Fire and forget) ──
+  Promise.all(
+    absentStudentDetails.map(student => {
+      const notifications = [];
+      
+      // 1. Queue SMS
+      if (student.parentPhone) {
+        notifications.push(sendAbsenceSMS(student.parentPhone, student.name));
+      }
+      
+      // 2. Queue Email
+      if (student.parentEmail) {
+        notifications.push(sendAbsenceEmail(
+          student.parentEmail, 
+          student.name, 
+          section, 
+          semesterNumber
+        ));
+      }
+      
+      return Promise.all(notifications);
+    })
+  ).catch(error => {
+    console.error("Notification (SMS/Email) background sending failed:", error.message);
+  });
 
   return {
     totalStudents: records.length,
@@ -145,7 +165,8 @@ export const getStudentAttendanceByRegistration = async (
   registrationNumber,
   currentUser
 ) => {
-  if (currentUser.role !== "Admin") {
+  const role = currentUser.role?.toLowerCase();
+  if (role !== "admin") {
     throw new Error("Only Admin can view student attendance");
   }
 
@@ -166,7 +187,8 @@ export const getStudentAttendanceByRegistration = async (
 
 //student can check there own attendance
 export const getMyAttendance = async (currentUser) => {
-  if (currentUser.role !== "Student") {
+  const role = currentUser.role?.toLowerCase();
+  if (role !== "student") {
     throw new Error("Only Students can view their attendance");
   }
 
@@ -192,7 +214,8 @@ export const getMyAttendance = async (currentUser) => {
   Get Section Attendance (Admin Only)
 */
 export const getSectionAttendance = async (query, currentUser) => {
-  if (currentUser.role !== "Admin") {
+  const role = currentUser.role?.toLowerCase();
+  if (role !== "admin") {
     throw new Error("Only Admin can view attendance");
   }
 
@@ -234,5 +257,199 @@ export const getSectionAttendance = async (query, currentUser) => {
     totalAbsent: absentStudents.length,
     presentStudents,
     absentStudents,
+  };
+};
+
+/*
+  Get students for a given semester + section (Teacher/Admin)
+*/
+export const getSectionStudents = async (query, currentUser) => {
+  const role = currentUser.role?.toLowerCase();
+  if (role !== "teacher" && role !== "admin") {
+    throw new Error("Only Teachers or Admins can view section students");
+  }
+
+  const { semester, section } = query;
+  const semesterNumber = Number(semester);
+
+  const records = await AcademicRecord.find({
+    semester: semesterNumber,
+    section,
+  }).populate("studentId");
+
+  if (!records.length) {
+    throw new Error("No students found for this section");
+  }
+
+  if (role === "teacher") {
+    const isAssigned = records.some(r => r.teacherId?.toString() === currentUser.id.toString());
+    if (!isAssigned) {
+      throw new Error("You are not assigned to this section.");
+    }
+  }
+
+  return records.map((record) => ({
+    studentId: record.studentId._id,
+    name: record.studentId.name,
+    registrationNumber: record.studentId.registrationNumber,
+    rollNumber: record.rollNumber,
+  }));
+};
+
+/*
+  Teacher dashboard overview (sections, stats, today status, recent history)
+*/
+export const getTeacherOverview = async (currentUser) => {
+  const role = currentUser.role?.toLowerCase();
+  if (role !== "teacher") {
+    throw new Error("Only Teachers can view their dashboard");
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const [records, todaysAttendance, allAttendance] = await Promise.all([
+    AcademicRecord.find({ teacherId: currentUser.id }).lean(),
+    Attendance.find({ submittedBy: currentUser.id, date: today }).lean(),
+    Attendance.find({ submittedBy: currentUser.id })
+      .sort({ date: -1 })
+      .limit(10)
+      .lean(),
+  ]);
+
+  // Unique assigned sections
+  const sectionMap = new Map();
+  records.forEach((r) => {
+    const key = `${r.semester}-${r.section}`;
+    if (!sectionMap.has(key)) {
+      sectionMap.set(key, { semester: r.semester, section: r.section });
+    }
+  });
+  const sections = Array.from(sectionMap.values());
+
+  // Stats
+  const totalClassesTaken = allAttendance.length;
+
+  let totalStudentsOverall = 0;
+  let totalPresentOverall = 0;
+
+  allAttendance.forEach((doc) => {
+    const total = doc.attendanceList.length;
+    const present = doc.attendanceList.filter(
+      (e) => e.status === "Present"
+    ).length;
+
+    totalStudentsOverall += total;
+    totalPresentOverall += present;
+  });
+
+  const averageAttendancePercentage =
+    totalStudentsOverall === 0
+      ? 0
+      : Number(
+        ((totalPresentOverall / totalStudentsOverall) * 100).toFixed(2)
+      );
+
+  const todayStatus = {
+    classesTaken: todaysAttendance.length,
+    totalSections: sections.length,
+  };
+
+  const history = allAttendance.map((doc) => {
+    const total = doc.attendanceList.length;
+    const present = doc.attendanceList.filter(
+      (e) => e.status === "Present"
+    ).length;
+    const absent = total - present;
+
+    return {
+      id: doc._id,
+      date: doc.date,
+      semester: doc.semester,
+      section: doc.section,
+      totalStudents: total,
+      present,
+      absent,
+    };
+  });
+
+  return {
+    sections,
+    stats: {
+      totalClassesTaken,
+      averageAttendancePercentage,
+    },
+    todayStatus,
+    history,
+  };
+};
+
+/*
+  Admin Dashboard Overview
+  Returns real counts + today's summary + recent submissions
+*/
+export const getAdminOverview = async (currentUser) => {
+  const role = currentUser.role?.toLowerCase();
+  if (role !== "admin") {
+    throw new Error("Only Admin can view this overview");
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+
+  const [
+    totalStudents,
+    totalTeachers,
+    uniqueSections,
+    todayAttendance,
+    recentSubmissions,
+  ] = await Promise.all([
+    Student.countDocuments(),
+    User.countDocuments({ role: "teacher" }),
+    AcademicRecord.distinct("section"),
+    Attendance.find({ date: { $gte: today, $lt: tomorrow } }).lean(),
+    Attendance.find()
+      .sort({ createdAt: -1 })
+      .limit(10)
+      .populate("submittedBy", "name")
+      .lean(),
+  ]);
+
+  // Today's present/absent totals across all sections
+  let todayPresent = 0;
+  let todayAbsent = 0;
+  todayAttendance.forEach((doc) => {
+    doc.attendanceList.forEach((entry) => {
+      if (entry.status === "Present") todayPresent++;
+      else todayAbsent++;
+    });
+  });
+
+  // Recent submissions table rows
+  const submissions = recentSubmissions.map((doc) => {
+    const total = doc.attendanceList.length;
+    const present = doc.attendanceList.filter((e) => e.status === "Present").length;
+    return {
+      id: doc._id,
+      teacherName: doc.submittedBy?.name || "Unknown",
+      section: doc.section,
+      semester: doc.semester,
+      date: doc.date,
+      createdAt: doc.createdAt,
+      present,
+      absent: total - present,
+      total,
+    };
+  });
+
+  return {
+    totalStudents,
+    totalTeachers,
+    totalSections: uniqueSections.length,
+    todayPresent,
+    todayAbsent,
+    submissions,
   };
 };

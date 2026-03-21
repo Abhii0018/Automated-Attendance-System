@@ -13,7 +13,7 @@ const attendanceSchema = new mongoose.Schema(
       type: String,
       required: true,
       uppercase: true,
-      match: [/^[A-Z]{2}$/, "Section must be two uppercase letters"],
+      match: [/^[A-Z]{1,2}$/, "Section must be 1–2 uppercase letters"],
     },
 
     date: {
@@ -56,7 +56,7 @@ const attendanceSchema = new mongoose.Schema(
 */
 attendanceSchema.index(
   { studentId: 1, date: 1 },
-  { unique: true }
+  { unique: false }
 );
 
 const Attendance = mongoose.model("Attendance", attendanceSchema);

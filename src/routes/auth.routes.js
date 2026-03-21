@@ -1,5 +1,5 @@
 import express from "express";
-import { register, login } from "../controllers/auth.controller.js";
+import { register, login, getTeachers, assignSemesterToTeacher } from "../controllers/auth.controller.js";
 
 import { protect } from "../middlewares/auth.middleware.js"; 
 import { authorize } from "../middlewares/role.middleware.js";
@@ -48,7 +48,7 @@ router.get("/protect", protect, (req, res) => {
 router.get(
   "/admin-test",
   protect,
-  authorize("Admin"),
+  authorize("admin"),
   (req, res) => {
     res.json({
       success: true,
@@ -56,6 +56,22 @@ router.get(
       user: req.user,
     });
   }
+);
+
+// Get All Teachers Dashboard
+router.get(
+  "/teachers",
+  protect,
+  authorize("admin"),
+  getTeachers
+);
+
+// Assign Teacher Semester
+router.post(
+  "/teachers/:id/assign",
+  protect,
+  authorize("admin"),
+  assignSemesterToTeacher
 );
 
 export default router;

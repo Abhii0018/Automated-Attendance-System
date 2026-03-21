@@ -25,6 +25,12 @@ export const registerValidator = [
     .withMessage("Password must contain at least one uppercase letter")
     .matches(/[0-9]/)
     .withMessage("Password must contain at least one number"),
+
+  body("role")
+    .optional()
+    .customSanitizer((v) => (typeof v === "string" ? v.toLowerCase() : v))
+    .isIn(["admin", "teacher", "student"])
+    .withMessage("Role must be admin, teacher, or student"),
 ];
 
 /*

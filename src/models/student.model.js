@@ -43,16 +43,18 @@ const studentSchema = new mongoose.Schema(
       required: true,
     },
     userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
-    required: true,
-    default: null,
-    unique: true
-},
-isRegistered: {
-  type: Boolean,
-  default: false,
-},
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: false,   // optional — set when student self-registers
+      sparse: true,      // allows multiple documents with no userId
+      unique: true,
+    },
+    isRegistered: {
+      type: Boolean,
+      default: false,
+    },
+
+
   },
   { timestamps: true }
 );

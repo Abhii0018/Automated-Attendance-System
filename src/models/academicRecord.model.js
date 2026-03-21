@@ -23,7 +23,7 @@ const academicRecordSchema = new mongoose.Schema(
       type: String,
       required: true,
       uppercase: true,
-      match: [/^[A-Z]{2}$/, "Section must be two uppercase letters"],
+      match: [/^[A-Z]{1,2}$/, "Section must be 1–2 uppercase letters"],
     },
     rollNumber: {
       type: Number,
@@ -45,7 +45,7 @@ const academicRecordSchema = new mongoose.Schema(
 */
 academicRecordSchema.index(
   { studentId: 1, semester: 1 },
-  { unique: true }
+  { unique: false }
 );
 
 //Roll must be unique inside teacher + semester + section

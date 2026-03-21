@@ -3,7 +3,9 @@ import {
   getAllStudents,
   deleteStudent,
   getStudentByRegistration,
+  assignSection,
 } from "../services/student.service.js";
+
 
 /*
   Create Student
@@ -80,5 +82,17 @@ export const deleteStudentController = async (req, res) => {
       success: false,
       message: error.message,
     });
+  }
+};
+
+/*
+  Assign Section
+*/
+export const assignSectionController = async (req, res) => {
+  try {
+    const result = await assignSection(req.params.id, req.body, req.user);
+    res.status(200).json({ success: true, message: "Section assigned successfully", data: result });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
   }
 };
