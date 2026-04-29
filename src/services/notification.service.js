@@ -125,3 +125,123 @@ export const sendAbsenceEmail = async (parentEmail, studentName, section = "", s
     return { success: false, error: error.message };
   }
 };
+
+export const sendVerificationEmail = async (email, name, otp) => {
+  try {
+    const transporter = getEmailTransporter();
+    if (!transporter) return { success: false, error: "Email not configured" };
+    if (!email) return { success: false, error: "Email missing" };
+    if (!otp) return { success: false, error: "Verification OTP missing" };
+
+    const mailOptions = {
+      from: `"AttendX System" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: "Your AttendX email verification OTP",
+      html: `
+        <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f4f6fa; padding: 24px; border-radius: 12px;">
+          <div style="background: #0a1628; border-radius: 10px; padding: 24px; text-align: center; margin-bottom: 24px;">
+            <h1 style="color: #c9a84c; margin: 0; font-size: 24px;">AttendX</h1>
+            <p style="color: rgba(255,255,255,0.6); margin: 6px 0 0; font-size: 13px;">Automated Attendance System</p>
+          </div>
+
+          <div style="background: #fff; border-radius: 10px; padding: 28px; border: 1px solid #dde3ef;">
+            <h2 style="color: #0a1628; margin: 0 0 16px; font-size: 18px;">Verify your email</h2>
+            <p style="color: #374151; font-size: 15px; line-height: 1.6;">Hi ${name || "there"},</p>
+            <p style="color: #374151; font-size: 15px; line-height: 1.6;">Thanks for registering on AttendX. Enter this OTP to verify your email.</p>
+            <div style="margin-top: 16px; background: #0a1628; color: #ffffff; display: inline-block; padding: 12px 20px; border-radius: 8px; font-weight: 700; letter-spacing: 3px; font-size: 20px;">
+              ${otp}
+            </div>
+            <p style="color: #6b7280; font-size: 12px; margin-top: 16px; line-height: 1.6;">
+              This verification link will expire in 30 minutes.
+            </p>
+          </div>
+        </div>
+      `,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error(`Verification email failed for ${email}: ${error.message}`);
+    return { success: false, error: error.message };
+  }
+};
+
+export const sendSuperAdminLoginOtpEmail = async (email, name, otp) => {
+  try {
+    const transporter = getEmailTransporter();
+    if (!transporter) return { success: false, error: "Email not configured" };
+    if (!email) return { success: false, error: "Email missing" };
+    if (!otp) return { success: false, error: "Login OTP missing" };
+
+    const mailOptions = {
+      from: `"AttendX Security" <${process.env.EMAIL_USER}>`,
+      to: email,
+      subject: "Your Super Admin login OTP",
+      html: `
+        <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f4f6fa; padding: 24px; border-radius: 12px;">
+          <div style="background: #0a1628; border-radius: 10px; padding: 24px; text-align: center; margin-bottom: 24px;">
+            <h1 style="color: #c9a84c; margin: 0; font-size: 24px;">AttendX</h1>
+            <p style="color: rgba(255,255,255,0.6); margin: 6px 0 0; font-size: 13px;">Super Admin Login Security</p>
+          </div>
+
+          <div style="background: #fff; border-radius: 10px; padding: 28px; border: 1px solid #dde3ef;">
+            <h2 style="color: #0a1628; margin: 0 0 16px; font-size: 18px;">Super Admin OTP Verification</h2>
+            <p style="color: #374151; font-size: 15px; line-height: 1.6;">Hi ${name || "Super Admin"},</p>
+            <p style="color: #374151; font-size: 15px; line-height: 1.6;">Use this OTP to continue your Super Admin login.</p>
+            <div style="margin-top: 16px; background: #0a1628; color: #ffffff; display: inline-block; padding: 12px 20px; border-radius: 8px; font-weight: 700; letter-spacing: 3px; font-size: 20px;">
+              ${otp}
+            </div>
+            <p style="color: #6b7280; font-size: 12px; margin-top: 16px; line-height: 1.6;">
+              This OTP expires in 10 minutes. If this request was not made by you, ignore this email.
+            </p>
+          </div>
+        </div>
+      `,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    console.error(`Super admin login OTP email failed for ${email}: ${error.message}`);
+    return { success: false, error: error.message };
+  }
+};
+
+export const sendDailyAbsenceSummaryEmail = async (parentEmail, studentName, absences, dateLabel) => {
+  try {
+    const transporter = getEmailTransporter();
+    if (!transporter) return { success: false, error: "Email not configured" };
+    if (!parentEmail) return { success: false, error: "Parent email missing" };
+
+    const rows = (absences || [])
+      .map((row) => `<tr><td style="padding: 6px 0;">${row.subject}</td><td style="padding: 6px 0;">${row.periodNumber}</td><td style="padding: 6px 0;">${row.section}</td></tr>`)
+      .join("");
+
+    const mailOptions = {
+      from: `"AttendX System" <${process.env.EMAIL_USER}>`,
+      to: parentEmail,
+      subject: `Daily Absence Summary: ${studentName}`,
+      html: `
+        <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f4f6fa; padding: 24px; border-radius: 12px;">
+          <div style="background: #0a1628; border-radius: 10px; padding: 20px; text-align: center; margin-bottom: 20px;">
+            <h2 style="color: #c9a84c; margin: 0;">AttendX Daily Summary</h2>
+          </div>
+          <div style="background: #fff; border-radius: 10px; padding: 20px; border: 1px solid #dde3ef;">
+            <p style="color:#374151;">Dear Parent/Guardian,</p>
+            <p style="color:#374151;">${studentName} was absent in the following classes on <strong>${dateLabel}</strong>:</p>
+            <table style="width:100%; font-size:14px; color:#374151; border-collapse: collapse;">
+              <thead><tr><th style="text-align:left; padding-bottom:6px;">Subject</th><th style="text-align:left; padding-bottom:6px;">Period</th><th style="text-align:left; padding-bottom:6px;">Section</th></tr></thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>
+        </div>
+      `,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    return { success: true, messageId: info.messageId };
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+};

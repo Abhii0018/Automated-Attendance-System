@@ -15,6 +15,17 @@ const attendanceSchema = new mongoose.Schema(
       uppercase: true,
       match: [/^[A-Z]{1,2}$/, "Section must be 1–2 uppercase letters"],
     },
+    subject: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    periodNumber: {
+      type: Number,
+      required: true,
+      min: 1,
+      max: 12,
+    },
 
     date: {
       type: Date,
@@ -51,12 +62,9 @@ const attendanceSchema = new mongoose.Schema(
 );
 
 
-/*
- Prevent duplicate attendance for same student on same day
-*/
 attendanceSchema.index(
-  { studentId: 1, date: 1 },
-  { unique: false }
+  { semester: 1, section: 1, subject: 1, periodNumber: 1, date: 1 },
+  { unique: true }
 );
 
 const Attendance = mongoose.model("Attendance", attendanceSchema);

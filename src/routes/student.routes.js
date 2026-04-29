@@ -5,6 +5,8 @@ import {
   getStudentByRegistrationController,
   deleteStudentController,
   assignSectionController,
+  linkStudentUserController,
+  getMyProfileController,
 } from "../controllers/student.controller.js";
 
 
@@ -31,6 +33,13 @@ router.post(
 router.get("/", protect, getAllStudentsController);
 
 router.get(
+  "/me",
+  protect,
+  authorize("student"),
+  getMyProfileController
+);
+
+router.get(
   "/:id",
   protect,
   idValidator,
@@ -55,6 +64,15 @@ router.post(
   idValidator,
   validate,
   assignSectionController
+);
+
+router.post(
+  "/:id/link-user",
+  protect,
+  authorize("admin"),
+  idValidator,
+  validate,
+  linkStudentUserController
 );
 
 export default router;

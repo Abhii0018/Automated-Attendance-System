@@ -1,5 +1,21 @@
 import express from "express";
-import { register, login, getTeachers, assignSemesterToTeacher } from "../controllers/auth.controller.js";
+import {
+  register,
+  login,
+  getTeachers,
+  assignSemesterToTeacher,
+  verifyEmail,
+  resendVerification,
+  getTeacherAssignments,
+  getPendingTeacherApplicationsController,
+  getReviewedTeacherApplicationsController,
+  reviewTeacherApplicationController,
+  getPendingAdminRequestsController,
+  getReviewedAdminRequestsController,
+  reviewAdminRequestController,
+  sendSuperAdminLoginOtpController,
+  verifySuperAdminLoginOtpController,
+} from "../controllers/auth.controller.js";
 
 import { protect } from "../middlewares/auth.middleware.js"; 
 import { authorize } from "../middlewares/role.middleware.js";
@@ -31,6 +47,11 @@ router.post(
   validate,
   login
 );
+
+router.post("/verify-email", verifyEmail);
+router.post("/resend-verification", resendVerification);
+router.post("/superadmin/send-login-otp", sendSuperAdminLoginOtpController);
+router.post("/superadmin/verify-login-otp", verifySuperAdminLoginOtpController);
 
 
 //for testing
@@ -66,12 +87,61 @@ router.get(
   getTeachers
 );
 
+router.get(
+  "/teachers/pending",
+  protect,
+  authorize("admin"),
+  getPendingTeacherApplicationsController
+);
+
+router.post(
+  "/teachers/:id/review",
+  protect,
+  authorize("admin"),
+  reviewTeacherApplicationController
+);
+
+router.get(
+  "/teachers/reviewed",
+  protect,
+  authorize("admin"),
+  getReviewedTeacherApplicationsController
+);
+
+router.get(
+  "/admins/pending",
+  protect,
+  authorize("admin"),
+  getPendingAdminRequestsController
+);
+
+router.post(
+  "/admins/:id/review",
+  protect,
+  authorize("admin"),
+  reviewAdminRequestController
+);
+
+router.get(
+  "/admins/reviewed",
+  protect,
+  authorize("admin"),
+  getReviewedAdminRequestsController
+);
+
 // Assign Teacher Semester
 router.post(
   "/teachers/:id/assign",
   protect,
   authorize("admin"),
   assignSemesterToTeacher
+);
+
+router.get(
+  "/teachers/:id/assignments",
+  protect,
+  authorize("admin"),
+  getTeacherAssignments
 );
 
 export default router;

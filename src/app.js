@@ -7,12 +7,17 @@ import studentRoutes from "./routes/student.routes.js";
 import attendanceRoutes from "./routes/attendance.routes.js";
 
 const app = express();
+const isProd = process.env.NODE_ENV === "production";
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: isProd ? 300 : 1500,
   standardHeaders: true,
   legacyHeaders: false,
+  message: {
+    success: false,
+    message: "Too many requests, please try again later.",
+  },
 });
 
 app.use(express.json());

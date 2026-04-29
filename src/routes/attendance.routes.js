@@ -5,6 +5,13 @@ import {
   getSectionStudentsController,
   getTeacherOverviewController,
   getAdminOverviewController,
+  getMyAttendanceController,
+  getTeacherPunchTodayController,
+  teacherCheckInController,
+  teacherCheckOutController,
+  sendDailyAbsenceSummariesController,
+  upsertTimetableSlotController,
+  getTodayTeacherScheduleController,
 } from "../controllers/attendance.controller.js";
 import { protect } from "../middlewares/auth.middleware.js";
 import { authorize } from "../middlewares/role.middleware.js";
@@ -51,6 +58,55 @@ router.get(
   protect,
   authorize("admin"),
   getAdminOverviewController
+);
+
+router.get(
+  "/me",
+  protect,
+  authorize("student"),
+  getMyAttendanceController
+);
+
+router.get(
+  "/teacher/punch/today",
+  protect,
+  authorize("teacher"),
+  getTeacherPunchTodayController
+);
+
+router.post(
+  "/teacher/punch/check-in",
+  protect,
+  authorize("teacher"),
+  teacherCheckInController
+);
+
+router.post(
+  "/teacher/punch/check-out",
+  protect,
+  authorize("teacher"),
+  teacherCheckOutController
+);
+
+router.post(
+  "/admin/notify-daily-absences",
+  protect,
+  authorize("admin"),
+  sendDailyAbsenceSummariesController
+);
+
+router.post(
+  "/admin/timetable-slot",
+  protect,
+  authorize("admin"),
+  upsertTimetableSlotController
+);
+
+router.get(
+  "/teacher/schedule/today",
+  protect,
+  authorize("teacher"),
+  getTodayTeacherScheduleController
 );
 
 export default router;

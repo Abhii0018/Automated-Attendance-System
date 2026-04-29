@@ -4,6 +4,8 @@ import {
   deleteStudent,
   getStudentByRegistration,
   assignSection,
+  linkStudentUser,
+  getMyStudentProfile,
 } from "../services/student.service.js";
 
 
@@ -92,6 +94,24 @@ export const assignSectionController = async (req, res) => {
   try {
     const result = await assignSection(req.params.id, req.body, req.user);
     res.status(200).json({ success: true, message: "Section assigned successfully", data: result });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+export const linkStudentUserController = async (req, res) => {
+  try {
+    const result = await linkStudentUser(req.params.id, req.body, req.user);
+    res.status(200).json({ success: true, message: "Student linked to account successfully", data: result });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
+};
+
+export const getMyProfileController = async (req, res) => {
+  try {
+    const result = await getMyStudentProfile(req.user);
+    res.status(200).json({ success: true, data: result });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
   }

@@ -29,8 +29,80 @@ export const registerValidator = [
   body("role")
     .optional()
     .customSanitizer((v) => (typeof v === "string" ? v.toLowerCase() : v))
-    .isIn(["admin", "teacher", "student"])
-    .withMessage("Role must be admin, teacher, or student"),
+    .isIn(["teacher", "student", "admin"])
+    .withMessage("Role must be teacher, student or admin"),
+
+  body("age")
+    .optional()
+    .isInt({ min: 3, max: 120 })
+    .withMessage("Age must be between 3 and 120"),
+
+  body("gender")
+    .optional()
+    .customSanitizer((v) => (typeof v === "string" ? v.toLowerCase() : v))
+    .isIn(["male", "female", "other"])
+    .withMessage("Gender must be male, female or other"),
+
+  body("parentName")
+    .optional()
+    .trim(),
+
+  body("parentRelation")
+    .optional()
+    .trim(),
+
+  body("parentEmail")
+    .optional()
+    .isEmail()
+    .withMessage("Parent email must be valid")
+    .normalizeEmail(),
+
+  body("parentPhone")
+    .optional()
+    .isLength({ min: 10, max: 15 })
+    .withMessage("Parent phone must be 10-15 digits"),
+
+  body("primarySubject")
+    .optional()
+    .trim(),
+
+  body("secondarySubject")
+    .optional()
+    .trim(),
+
+  body("yearsOfExperience")
+    .optional()
+    .isInt({ min: 0, max: 60 })
+    .withMessage("Years of experience must be between 0 and 60"),
+
+  body("highestQualification")
+    .optional()
+    .trim(),
+
+  body("educationalBackground")
+    .optional()
+    .trim(),
+
+  body("hasExperience")
+    .optional()
+    .isBoolean()
+    .withMessage("hasExperience must be true or false"),
+
+  body("phone")
+    .optional()
+    .trim(),
+
+  body("department")
+    .optional()
+    .trim(),
+
+  body("designation")
+    .optional()
+    .trim(),
+
+  body("adminAccessReason")
+    .optional()
+    .trim(),
 ];
 
 /*
